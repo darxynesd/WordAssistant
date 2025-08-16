@@ -10,20 +10,20 @@ from kivy.animation import Animation
 from kivy.properties import ListProperty
 import time
 
-# Обновленная цветовая палитра
-PRIMARY_BLUE = (0.16, 0.47, 0.75, 1)       # #2980b9 - основной голубой
-SECONDARY_BLUE = (0.33, 0.67, 0.93, 1)      # #55a8f7 - светлый голубой
-LIGHT_BG = (0.95, 0.97, 1.0, 1)             # #f2f7ff - фоновый цвет
-DARK_TEXT = (0.12, 0.14, 0.16, 1)           # #1f2429 - текст
-WHITE = (1, 1, 1, 1)                        # Чистый белый
-START_COLOR = (0.18, 0.8, 0.44, 1)          # #2ecc71 - зеленый (начало)
-END_COLOR = (0.91, 0.3, 0.24, 1)            # #e84c3d - красный (конец)
-HIGHLIGHT = (0.99, 0.83, 0.24, 0.85)        # #fdd40f - выделение
-CELL_COLOR = (0.98, 0.99, 1.0, 1)           # #fafcff - цвет клеток
-BORDER_COLOR = (0.8, 0.85, 0.9, 1)          # #ccd8e4 - границы клеток
-RESULT_BG = (0.92, 0.95, 1.0, 1)            # #ebf2ff - фон результатов
 
-# Соответствие клавиш русским буквам
+PRIMARY_BLUE = (0.16, 0.47, 0.75, 1)      #  основной голубой
+SECONDARY_BLUE = (0.33, 0.67, 0.93, 1)    # светлый голубой
+LIGHT_BG = (0.95, 0.97, 1.0, 1)         #фоновый цвет
+DARK_TEXT = (0.12, 0.14, 0.16, 1)         # текст
+WHITE = (1, 1, 1, 1)                    # Чистый белый
+START_COLOR = (0.18, 0.8, 0.44, 1)      #зеленый (начало)
+END_COLOR = (0.91, 0.3, 0.24, 1)        # красный (конец)
+HIGHLIGHT = (0.99, 0.83, 0.24, 0.85)     #  выделение
+CELL_COLOR = (0.98, 0.99, 1.0, 1)        #цвет клеток
+BORDER_COLOR = (0.8, 0.85, 0.9, 1)       #границы клеток
+RESULT_BG = (0.92, 0.95, 1.0, 1)        #фон результатов
+
+#клава
 RUSSIAN_KEYMAP = {
     'q': 'й', 'w': 'ц', 'e': 'у', 'r': 'к', 't': 'е', 'y': 'н',
     'u': 'г', 'i': 'ш', 'o': 'щ', 'p': 'з', '[': 'х', ']': 'ъ',
@@ -222,7 +222,7 @@ class WordAssistantApp(App):
             print(f"Словарь загружен за {time.time() - start_time:.2f} сек")
         except Exception as e:
             print(f"Ошибка загрузки: {e}")
-
+#Trie структура даннфх
     def _add_to_trie(self, word):
         node = self.word_trie
         for char in word:
@@ -317,7 +317,7 @@ class WordAssistantApp(App):
         self.found_words = {}
         self.sorted_words = []
         self.current_word_index = 0
-
+#главный поиск
     def find_words(self, instance):
         start_time = time.time()
         grid = [
@@ -361,7 +361,7 @@ class WordAssistantApp(App):
                 self.show_word(self.sorted_words[0][0], self.sorted_words[0][1])
         
         print(f"Поиск завершен за {time.time() - start_time:.2f} сек")
-
+#рекурсивный поиск поэтому и ыстрый
     def _fast_search(self, grid, row, col, current_word, path, trie_node, found_words):
         if '$' in trie_node and len(current_word) >= 2:
             found_words[current_word] = path.copy()
