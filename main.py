@@ -5,19 +5,23 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, Line
 from kivy.animation import Animation
 from kivy.properties import ListProperty
 import time
 
-# Цвета
-BLUE_COLOR = (0.2, 0.6, 0.9, 1)  # Основной голубой
-DARK_BLUE = (0.1, 0.4, 0.8, 1)    # Темно-голубой
-LIGHT_BLUE = (0.4, 0.8, 1, 1)     # Светло-голубой
-WHITE = (1, 1, 1, 1)              # Белый
-HIGHLIGHT_COLOR = (1, 0.8, 0, 0.7)  # Желтый для подсветки
-START_COLOR = (0, 1, 0, 1)        # Зеленый для начала слова
-END_COLOR = (1, 0, 0, 1)          # Красный для конца слова
+# Обновленная цветовая палитра
+PRIMARY_BLUE = (0.16, 0.47, 0.75, 1)       # #2980b9 - основной голубой
+SECONDARY_BLUE = (0.33, 0.67, 0.93, 1)      # #55a8f7 - светлый голубой
+LIGHT_BG = (0.95, 0.97, 1.0, 1)             # #f2f7ff - фоновый цвет
+DARK_TEXT = (0.12, 0.14, 0.16, 1)           # #1f2429 - текст
+WHITE = (1, 1, 1, 1)                        # Чистый белый
+START_COLOR = (0.18, 0.8, 0.44, 1)          # #2ecc71 - зеленый (начало)
+END_COLOR = (0.91, 0.3, 0.24, 1)            # #e84c3d - красный (конец)
+HIGHLIGHT = (0.99, 0.83, 0.24, 0.85)        # #fdd40f - выделение
+CELL_COLOR = (0.98, 0.99, 1.0, 1)           # #fafcff - цвет клеток
+BORDER_COLOR = (0.8, 0.85, 0.9, 1)          # #ccd8e4 - границы клеток
+RESULT_BG = (0.92, 0.95, 1.0, 1)            # #ebf2ff - фон результатов
 
 # Соответствие клавиш русским буквам
 RUSSIAN_KEYMAP = {
@@ -29,21 +33,21 @@ RUSSIAN_KEYMAP = {
     'm': 'ь', ',': 'б', '.': 'ю', '/': '.', '`': 'ё'
 }
 
-Window.clearcolor = (0.835, 0.905, 0.949, 1)  # #d5e7f2 небесноголубой фон
+Window.clearcolor = LIGHT_BG
 
 class HighlightButton(Button):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.default_bg = self.background_color
-        self.default_color = (0, 0, 0, 1)  # Черный цвет текста
+        self.default_color = DARK_TEXT
 
     def highlight(self, color, duration=0.1):
         self.background_color = color
-        self.color = (0, 0, 0, 1)
+        self.color = WHITE
 
     def reset_color(self):
         self.background_color = self.default_bg
-        self.color = (0, 0, 0, 1)
+        self.color = DARK_TEXT
 
 class WordGrid(GridLayout):
     current_path = ListProperty([])
@@ -58,7 +62,7 @@ class WordGrid(GridLayout):
         self.size_hint = (None, None)
         self.width = self.cell_size * 5
         self.height = self.cell_size * 5
-        self.pos_hint = {'center_x': 0.5}  # Центрируем по горизонтали
+        self.pos_hint = {'center_x': 0.5}
         self.create_grid()
 
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
@@ -74,32 +78,32 @@ class WordGrid(GridLayout):
                 size_hint=(None, None),
                 size=(self.cell_size, self.cell_size),
                 background_normal='',
-                background_color=(0.96, 0.96, 0.96, 1),
-                color=(0, 0, 0, 1),
+                background_color=CELL_COLOR,
+                color=DARK_TEXT,
                 bold=True
             )
             with cell.canvas.before:
-                Color(0.024, 0.196, 0.31, 1)  # #06324f рамка
+                Color(*BORDER_COLOR)
                 cell.border_rect = Rectangle(pos=cell.pos, size=cell.size)
-            cell.bind(pos=lambda inst, val: setattr(inst.border_rect, 'pos', val))
-            cell.bind(size=lambda inst, val: setattr(inst.border_rect, 'size', val))
+            cell.bind(pos=self.update_border_rect)
+            cell.bind(size=self.update_border_rect)
             self.cells.append(cell)
             self.add_widget(cell)
 
+    def update_border_rect(self, instance, value):
+        instance.border_rect.pos = instance.pos
+        instance.border_rect.size = instance.size
+
     def get_cell(self, row, col):
-        """Возвращает кнопку клетки по координатам"""
         if 0 <= row < 5 and 0 <= col < 5:
             return self.cells[row * 5 + col]
         return None
 
     def get_letter(self, row, col):
-        """Возвращает букву в клетке по координатам"""
         cell = self.get_cell(row, col)
         return cell.text if cell else ''
 
     def show_path(self, path):
-        """Мгновенно показывает путь слова с градиентной подсветкой"""
-        # Сбросить цвета
         for cell in self.cells:
             cell.reset_color()
         
@@ -109,17 +113,15 @@ class WordGrid(GridLayout):
         self.current_path = path
         total = len(path)
         
-        # Подсветить клетки с градиентом
         for i, (row, col) in enumerate(path):
             cell = self.get_cell(row, col)
             if cell:
-                # Градиент от зеленого к красному
                 ratio = i / max(1, total-1)
                 color = (
-                    ratio,        # R увеличивается
-                    1 - ratio,    # G уменьшается
-                    0,            # B нет
-                    1             # Alpha
+                    START_COLOR[0] + (END_COLOR[0] - START_COLOR[0]) * ratio,
+                    START_COLOR[1] + (END_COLOR[1] - START_COLOR[1]) * ratio,
+                    START_COLOR[2] + (END_COLOR[2] - START_COLOR[2]) * ratio,
+                    1
                 )
                 cell.highlight(color)
 
@@ -150,23 +152,36 @@ class WordGrid(GridLayout):
 class ScrollableLabel(ScrollView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.layout = BoxLayout(orientation='vertical', size_hint_y=None)
+        with self.canvas.before:
+            Color(*RESULT_BG)
+            self.bg = Rectangle(pos=self.pos, size=self.size)
+        
+        self.layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=2)
         self.layout.bind(minimum_height=self.layout.setter('height'))
         self.add_widget(self.layout)
-        self.word_paths = {}  # Словарь: слово -> путь (список координат)
+        self.word_paths = {}
         self.current_word_index = 0
+        
+        self.bind(pos=self._update_bg, size=self._update_bg)
+
+    def _update_bg(self, *args):
+        self.bg.pos = self.pos
+        self.bg.size = self.size
 
     def add_word(self, word, path):
-        """Добавляет слово с возможностью выделения"""
         btn = Button(
             text=f"{word} (длина: {len(word)})",
             size_hint_y=None,
             height=40,
-            background_color=(0.9, 0.9, 0.95, 1),
-            color=DARK_BLUE,
+            background_color=WHITE,
+            color=DARK_TEXT,
             bold=True,
             background_normal=''
         )
+        with btn.canvas.before:
+            Color(*BORDER_COLOR)
+            Line(rectangle=(btn.x, btn.y, btn.width, btn.height), width=1)
+        
         btn.word = word
         btn.path = path
         btn.bind(on_press=self.highlight_word)
@@ -174,29 +189,27 @@ class ScrollableLabel(ScrollView):
         self.word_paths[word] = path
 
     def highlight_word(self, instance):
-        """Выделяет слово на поле мгновенно"""
         app = App.get_running_app()
         app.show_word(instance.word, instance.path)
 
     def clear(self):
-        """Очищает список слов"""
         self.layout.clear_widgets()
         self.word_paths = {}
         self.current_word_index = 0
 
 class MainLayout(BoxLayout):
-    """Главный макет приложения"""
+    pass
 
 class WordAssistantApp(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.word_trie = {}
-        self.found_words = {}  # Словарь: слово -> путь
-        self.sorted_words = []  # Отсортированный список слов
+        self.found_words = {}  
+        self.sorted_words = []
         self.current_word_index = 0
         self.load_dictionary()
-        self.cell_size = 60  # Размер клетки
-        self.padding = 20    # Отступы вокруг поля
+        self.cell_size = 60
+        self.padding = 20
 
     def load_dictionary(self):
         start_time = time.time()
@@ -209,9 +222,6 @@ class WordAssistantApp(App):
             print(f"Словарь загружен за {time.time() - start_time:.2f} сек")
         except Exception as e:
             print(f"Ошибка загрузки: {e}")
-            test_words = ['КОШКА', 'СЛОН', 'ДОМ', 'СТОЛ', 'МЯЧ']
-            for word in test_words:
-                self._add_to_trie(word)
 
     def _add_to_trie(self, word):
         node = self.word_trie
@@ -222,31 +232,26 @@ class WordAssistantApp(App):
         node['$'] = True
 
     def build(self):
-        # Рассчитываем размер окна
         grid_width = self.cell_size * 5
         grid_height = self.cell_size * 5
         window_width = grid_width + 2 * self.padding
-        window_height = grid_height + 350  # Место для кнопок и результатов
+        window_height = grid_height + 350
         
         Window.size = (window_width, window_height)
         Window.minimum_width = window_width
         Window.minimum_height = window_height
 
-        # Главный макет
         main_layout = MainLayout(orientation='vertical', padding=10, spacing=10)
         
-        # Игровое поле
         self.word_grid = WordGrid(size_hint=(1, None), height=grid_height)
         main_layout.add_widget(self.word_grid)
-        main_layout.word_grid = self.word_grid  # Сохраняем ссылку для подсветки
 
-        # Панель управления
         controls = BoxLayout(size_hint=(1, None), height=50, spacing=10)
         
         self.clear_button = Button(
             text='Очистить поле',
-            background_color=LIGHT_BLUE,
-            color=DARK_BLUE,
+            background_color=SECONDARY_BLUE,
+            color=WHITE,
             bold=True,
             font_size=16
         )
@@ -254,8 +259,8 @@ class WordAssistantApp(App):
         
         self.search_button = Button(
             text='Найти слова',
-            background_color=LIGHT_BLUE,
-            color=DARK_BLUE,
+            background_color=PRIMARY_BLUE,
+            color=WHITE,
             bold=True,
             font_size=16
         )
@@ -265,36 +270,33 @@ class WordAssistantApp(App):
         controls.add_widget(self.search_button)
         main_layout.add_widget(controls)
 
-        # Область результатов
         self.results_scroll = ScrollableLabel(size_hint=(1, 1))
         main_layout.add_widget(self.results_scroll)
 
-        # Счетчик найденных слов
         self.counter_label = Label(
             text='Найдено слов: 0',
             size_hint=(1, None),
             height=30,
-            color=DARK_BLUE,
+            color=DARK_TEXT,
             bold=True,
             font_size=14
         )
         main_layout.add_widget(self.counter_label)
 
-        # Кнопки навигации
         nav_buttons = BoxLayout(size_hint=(1, None), height=40, spacing=5)
         
         self.prev_button = Button(
             text='← Предыдущее',
-            background_color=LIGHT_BLUE,
-            color=DARK_BLUE,
+            background_color=SECONDARY_BLUE,
+            color=WHITE,
             bold=True
         )
         self.prev_button.bind(on_press=self.show_prev_word)
         
         self.next_button = Button(
             text='Следующее →',
-            background_color=LIGHT_BLUE,
-            color=DARK_BLUE,
+            background_color=PRIMARY_BLUE,
+            color=WHITE,
             bold=True
         )
         self.next_button.bind(on_press=self.show_next_word)
@@ -323,7 +325,7 @@ class WordAssistantApp(App):
             for row in range(5)
         ]
         
-        self.found_words = {}  # Слово: список координат
+        self.found_words = {}
         
         for row in range(5):
             for col in range(5):
@@ -347,16 +349,13 @@ class WordAssistantApp(App):
                 height=40
             ))
         else:
-            # Сортируем слова по длине (от самых длинных к коротким)
             self.sorted_words = sorted(self.found_words.items(), key=lambda x: (-len(x[0]), x[0]))
             
-            # Добавляем слова в список
             for word, path in self.sorted_words:
                 self.results_scroll.add_word(word, path)
             
             self.counter_label.text = f'Найдено слов: {len(self.found_words)}'
             
-            # Показываем первое слово
             if self.sorted_words:
                 self.current_word_index = 0
                 self.show_word(self.sorted_words[0][0], self.sorted_words[0][1])
@@ -386,17 +385,14 @@ class WordAssistantApp(App):
                         )
 
     def show_word(self, word, path):
-        """Мгновенно показывает слово на поле с градиентом"""
         self.word_grid.show_path(path)
         
-        # Прокручиваем к слову в списке
         for idx, child in enumerate(self.results_scroll.layout.children):
             if hasattr(child, 'word') and child.word == word:
                 self.results_scroll.scroll_to(child)
                 break
 
     def show_next_word(self, instance):
-        """Показывает следующее слово в отсортированном порядке"""
         if not self.sorted_words:
             return
             
@@ -405,7 +401,6 @@ class WordAssistantApp(App):
         self.show_word(word, path)
 
     def show_prev_word(self, instance):
-        """Показывает предыдущее слово в отсортированном порядке"""
         if not self.sorted_words:
             return
             
